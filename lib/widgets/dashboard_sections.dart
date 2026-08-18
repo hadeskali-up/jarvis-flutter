@@ -213,6 +213,27 @@ class _ProviderCard extends StatelessWidget {
   }
 }
 
+class _AgentStatus {
+  final String label;
+  final Color color;
+
+  const _AgentStatus(this.label, this.color);
+}
+
+_AgentStatus _agentStatus(String lastSeen) {
+  final parsed = DateTime.tryParse(lastSeen);
+  if (parsed == null) return const _AgentStatus('UNKNOWN', NeoColors.orange);
+  final age = DateTime.now().toUtc().difference(parsed.toUtc());
+  if (age <= const Duration(minutes: 15)) {
+    return const _AgentStatus('ACTIVE', NeoColors.green);
+  }
+  if (age <= const Duration(hours: 24)) {
+    return const _AgentStatus('IDLE', NeoColors.orange);
+  }
+  final days = age.inDays;
+  return _AgentStatus('STALE • ${days}d', NeoColors.red);
+}
+
 class AgentStatusCard extends StatelessWidget {
   final Map<String, AgentStat> agents;
 
@@ -225,15 +246,29 @@ class AgentStatusCard extends StatelessWidget {
       child: Column(
         children: entries.map((entry) {
           final stat = entry.value;
+          final status = _agentStatus(stat.lastSeen);
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 7),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    entry.key,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.key,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        status.label,
+                        style: TextStyle(
+                          color: status.color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Text('${stat.completed} done', style: const TextStyle(fontWeight: FontWeight.w700)),

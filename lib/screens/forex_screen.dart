@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/forex_position.dart';
 import '../models/mt5_history.dart';
 import '../services/mt5_history_service.dart';
+import '../services/forex_service.dart';
 import '../theme/colors.dart';
 import '../widgets/neo_button.dart';
 import '../widgets/neo_card.dart';
@@ -19,14 +20,41 @@ class ForexScreen extends StatefulWidget {
 
 class _ForexScreenState extends State<ForexScreen> {
   final MT5HistoryService _historyService = MT5HistoryService();
+  final ForexService _positionsService = ForexService();
+  late MT5PositionsResponse _positions;
   MT5HistoryResponse? _history;
   String? _historyError;
+  String? _positionsError;
   bool _historyLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _positions = widget.positions;
     _loadHistory();
+  }
+
+  Future<void> _loadPositions() async {
+    try {
+      final result = await _positionsService.fetchMT5Positions();
+      if (!mounted) return;
+      setState(() {
+        _positions = result;
+        _positionsError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _positionsError = error.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _loadPositions(),
+      _loadHistory(),
+    ]);
   }
 
   Future<void> _loadHistory() async {
@@ -54,7 +82,7 @@ class _ForexScreenState extends State<ForexScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final positions = widget.positions;
+    final positions = _positions;
     return Scaffold(
       backgroundColor: NeoColors.cream,
       appBar: AppBar(
@@ -70,12 +98,35 @@ class _ForexScreenState extends State<ForexScreen> {
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadHistory,
+          onRefresh: _refreshAll,
           color: NeoColors.orange,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(20),
             children: [
+              if (_positionsError != null) ...[
+                NeoCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _positionsError!,
+                        style: const TextStyle(
+                          color: NeoColors.red,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      NeoButton(
+                        text: 'Retry positions',
+                        icon: Icons.refresh,
+                        onPressed: _loadPositions,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               _OpenSummary(positions: positions),
               const SizedBox(height: 22),
               const _SectionTitle('Open Positions'),
