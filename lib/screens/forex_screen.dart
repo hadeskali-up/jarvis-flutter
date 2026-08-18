@@ -313,15 +313,15 @@ class _HistorySummary extends StatelessWidget {
         backgroundColor: NeoColors.yellow,
         child: Column(
           children: [
-            _summaryRow('Daily P&L (${history.summary.todayMyt})', history.summary.dailyPnl),
-            _summaryRow('All-time P&L', history.summary.allTimePnl),
-            _summaryRow('Filtered list P&L', history.summary.filteredListPnl),
+            _summaryRow(
+              'Fetched ${history.deals.length} trades P&L',
+              history.fetchedPnl,
+            ),
             const Divider(color: NeoColors.black),
-            Row(
-              children: [
-                Expanded(child: Text('${history.total} total deals', style: const TextStyle(fontWeight: FontWeight.w800))),
-                Text('${history.count} loaded', style: const TextStyle(fontWeight: FontWeight.w800)),
-              ],
+            const Text(
+              'Calculated only from the trades loaded on this page.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ],
         ),

@@ -86,5 +86,6 @@ void main() {
     expect(history.summary.allTimePnl, -1648.04);
     expect(history.summary.todayMyt, '2026-08-18');
     expect(history.total, 817);
+    expect(history.fetchedPnl, 10.49);
   });
 }

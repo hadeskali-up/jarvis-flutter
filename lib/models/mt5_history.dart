@@ -15,6 +15,9 @@ class MT5HistoryResponse {
     required this.summary,
   });
 
+  double get fetchedPnl =>
+      deals.fold<double>(0, (sum, deal) => sum + deal.netPnl);
+
   factory MT5HistoryResponse.fromJson(Map<String, dynamic> json) {
     final rawDeals = json['deals'] ?? json['items'];
     final rawSummary = json['summary'];

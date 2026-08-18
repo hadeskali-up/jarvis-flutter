@@ -3,11 +3,9 @@ import '../theme/colors.dart';
 import '../widgets/neo_card.dart';
 import '../widgets/neo_button.dart';
 import '../widgets/dashboard_sections.dart';
-import '../services/ai_service.dart';
 import '../services/crypto_service.dart';
 import '../services/forex_service.dart';
 import '../services/dashboard_service.dart';
-import '../models/ai_usage.dart';
 import '../models/crypto_position.dart';
 import '../models/forex_position.dart';
 import '../models/dashboard_data.dart';
@@ -22,22 +20,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final AiService _aiService = AiService();
   final CryptoService _cryptoService = CryptoService();
   final ForexService _forexService = ForexService();
   final DashboardService _dashboardService = DashboardService();
 
-  AiUsageData? _aiUsage;
   CryptoPositionsResponse? _cryptoPositions;
   MT5PositionsResponse? _mt5Positions;
   DashboardSnapshot? _dashboard;
   ProviderBalancesResponse? _providerBalances;
 
-  bool _isLoadingAi = true;
   bool _isLoadingCrypto = true;
   bool _isLoadingMt5 = true;
 
-  String? _aiError;
   String? _cryptoError;
   String? _mt5Error;
   String? _dashboardError;
@@ -51,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     await Future.wait([
-      _loadAiUsage(),
       _loadCryptoPositions(),
       _loadMt5Positions(),
       _loadDashboard(),
@@ -84,26 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _providerError = e.toString());
-    }
-  }
-
-  Future<void> _loadAiUsage() async {
-    try {
-      final data = await _aiService.fetchUsage();
-      if (mounted) {
-        setState(() {
-          _aiUsage = data;
-          _isLoadingAi = false;
-          _aiError = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingAi = false;
-          _aiError = e.toString();
-        });
-      }
     }
   }
 
@@ -202,6 +175,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                const DashboardSectionTitle(
+                  title: 'MT5 / Forex',
+                  icon: Icons.currency_exchange,
+                ),
+                _buildMt5Section(),
+                const SizedBox(height: 24),
+
                 if (_dashboardError != null && _dashboard == null)
                   NeoCard(child: _errorState(_dashboardError!, _loadDashboard))
                 else if (_dashboard == null)
@@ -236,95 +216,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                 ],
 
-                const DashboardSectionTitle(
-                  title: 'AI Router Credit',
-                  icon: Icons.credit_card,
-                ),
-                _buildAiCreditCard(),
-                const SizedBox(height: 24),
-
                 // Crypto Positions
                 _buildCryptoSection(),
-                const SizedBox(height: 24),
-
-                // MT5 Positions
-                _buildMt5Section(),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAiCreditCard() {
-    return NeoCard(
-      backgroundColor: NeoColors.mintGreen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.credit_card, size: 24),
-              const SizedBox(width: 8),
-              const Text(
-                'AI Router Credit',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_isLoadingAi)
-            const Center(child: CircularProgressIndicator())
-          else if (_aiError != null)
-            _errorState(_aiError!, _loadAiUsage)
-          else if (_aiUsage != null && !_aiUsage!.ok)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Router balance temporarily unavailable',
-                  style: TextStyle(
-                    color: NeoColors.red,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _aiUsage!.error.isEmpty ? 'Provider did not return a balance.' : _aiUsage!.error,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                if (_aiUsage!.lastGoodAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text('Last successful fetch: ${_aiUsage!.lastGoodAt}'),
-                ],
-                const SizedBox(height: 12),
-                NeoButton(text: 'Retry credit', icon: Icons.refresh, onPressed: _loadAiUsage),
-              ],
-            )
-          else if (_aiUsage != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '\$${_aiUsage!.balance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'Spent \$${_aiUsage!.spent.toStringAsFixed(2)} of '
-                  '\$${_aiUsage!.budget.toStringAsFixed(2)} '
-                  '(${_aiUsage!.usedPct.toStringAsFixed(0)}%)',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-        ],
       ),
     );
   }
