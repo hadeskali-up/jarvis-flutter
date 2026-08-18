@@ -10,14 +10,14 @@ class NeoCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const NeoCard({
-    Key? key,
+    super.key,
     required this.child,
     this.backgroundColor,
     this.width,
     this.height,
     this.padding,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

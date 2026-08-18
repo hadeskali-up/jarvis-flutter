@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 class ForexScreen extends StatelessWidget {
   final MT5PositionsResponse positions;
 
-  const ForexScreen({Key? key, required this.positions}) : super(key: key);
+  const ForexScreen({super.key, required this.positions});
 
   @override
   Widget build(BuildContext context) {

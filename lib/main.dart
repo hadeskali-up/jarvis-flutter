@@ -13,7 +13,7 @@ void main() {
 }
 
 class JarvisApp extends StatelessWidget {
-  const JarvisApp({Key? key}) : super(key: key);
+  const JarvisApp({super.key});
 
   @override
   Widget build(BuildContext context) {

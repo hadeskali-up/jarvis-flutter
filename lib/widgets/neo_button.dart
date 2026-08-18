@@ -9,13 +9,13 @@ class NeoButton extends StatelessWidget {
   final IconData? icon;
 
   const NeoButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.backgroundColor,
     this.textColor,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

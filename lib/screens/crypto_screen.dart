@@ -6,7 +6,7 @@ import '../models/crypto_position.dart';
 class CryptoScreen extends StatelessWidget {
   final CryptoPositionsResponse positions;
 
-  const CryptoScreen({Key? key, required this.positions}) : super(key: key);
+  const CryptoScreen({super.key, required this.positions});
 
   @override
   Widget build(BuildContext context) {
