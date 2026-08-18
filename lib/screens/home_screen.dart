@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/neo_card.dart';
 import '../widgets/neo_button.dart';
+import '../widgets/dashboard_sections.dart';
 import '../services/ai_service.dart';
 import '../services/crypto_service.dart';
 import '../services/forex_service.dart';
+import '../services/dashboard_service.dart';
 import '../models/ai_usage.dart';
 import '../models/crypto_position.dart';
 import '../models/forex_position.dart';
+import '../models/dashboard_data.dart';
 import 'crypto_screen.dart';
 import 'forex_screen.dart';
 
@@ -22,10 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final AiService _aiService = AiService();
   final CryptoService _cryptoService = CryptoService();
   final ForexService _forexService = ForexService();
+  final DashboardService _dashboardService = DashboardService();
 
   AiUsageData? _aiUsage;
   CryptoPositionsResponse? _cryptoPositions;
   MT5PositionsResponse? _mt5Positions;
+  DashboardSnapshot? _dashboard;
+  ProviderBalancesResponse? _providerBalances;
 
   bool _isLoadingAi = true;
   bool _isLoadingCrypto = true;
@@ -34,6 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _aiError;
   String? _cryptoError;
   String? _mt5Error;
+  String? _dashboardError;
+  String? _providerError;
 
   @override
   void initState() {
@@ -46,7 +54,37 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadAiUsage(),
       _loadCryptoPositions(),
       _loadMt5Positions(),
+      _loadDashboard(),
+      _loadProviderBalances(),
     ]);
+  }
+
+  Future<void> _loadDashboard() async {
+    try {
+      final data = await _dashboardService.fetchSnapshot();
+      if (!mounted) return;
+      setState(() {
+        _dashboard = data;
+        _dashboardError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _dashboardError = e.toString());
+    }
+  }
+
+  Future<void> _loadProviderBalances() async {
+    try {
+      final data = await _dashboardService.fetchProviderBalances();
+      if (!mounted) return;
+      setState(() {
+        _providerBalances = data;
+        _providerError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _providerError = e.toString());
+    }
   }
 
   Future<void> _loadAiUsage() async {
@@ -145,33 +183,17 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Hi, User',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: NeoColors.black,
-                      ),
-                    ),
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: NeoColors.yellow,
-                        border: Border.all(color: NeoColors.black, width: 3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person, color: NeoColors.black),
-                    ),
-                  ],
+                const Text(
+                  'JARVIS DASHBOARD',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: NeoColors.black,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Good day',
+                  'Systems, providers, agents & trading',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -180,7 +202,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // AI Router Credit
+                if (_dashboardError != null && _dashboard == null)
+                  NeoCard(child: _errorState(_dashboardError!, _loadDashboard))
+                else if (_dashboard == null)
+                  const Center(child: CircularProgressIndicator())
+                else ...[
+                  if (_dashboard!.vps != null) ...[
+                    const DashboardSectionTitle(
+                      title: 'VPS Health',
+                      icon: Icons.dns_outlined,
+                    ),
+                    VpsHealthCard(data: _dashboard!.vps!),
+                    const SizedBox(height: 24),
+                  ],
+                  const DashboardSectionTitle(
+                    title: 'AI Provider Balances',
+                    icon: Icons.account_balance_wallet_outlined,
+                  ),
+                  ProviderBalanceCards(
+                    balances: _providerBalances,
+                    deepseekFallback: _dashboard!.deepseek,
+                  ),
+                  if (_providerError != null) ...[
+                    const SizedBox(height: 10),
+                    _errorState(_providerError!, _loadProviderBalances),
+                  ],
+                  const SizedBox(height: 24),
+                  const DashboardSectionTitle(
+                    title: 'Agent Status',
+                    icon: Icons.hub_outlined,
+                  ),
+                  AgentStatusCard(agents: _dashboard!.agents),
+                  const SizedBox(height: 24),
+                ],
+
+                const DashboardSectionTitle(
+                  title: 'AI Router Credit',
+                  icon: Icons.credit_card,
+                ),
                 _buildAiCreditCard(),
                 const SizedBox(height: 24),
 
@@ -226,19 +285,24 @@ class _HomeScreenState extends State<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _aiUsage!.error.isEmpty
-                      ? 'AI usage unavailable'
-                      : _aiUsage!.error,
-                  style: const TextStyle(
+                const Text(
+                  'Router balance temporarily unavailable',
+                  style: TextStyle(
                     color: NeoColors.red,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                   ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _aiUsage!.error.isEmpty ? 'Provider did not return a balance.' : _aiUsage!.error,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 if (_aiUsage!.lastGoodAt != null) ...[
                   const SizedBox(height: 4),
-                  Text('Last good: ${_aiUsage!.lastGoodAt}'),
+                  Text('Last successful fetch: ${_aiUsage!.lastGoodAt}'),
                 ],
+                const SizedBox(height: 12),
+                NeoButton(text: 'Retry credit', icon: Icons.refresh, onPressed: _loadAiUsage),
               ],
             )
           else if (_aiUsage != null)

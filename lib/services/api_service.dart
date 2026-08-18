@@ -3,15 +3,21 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const baseUrl = 'https://bridge.alisuhari.top';
+  final String baseUrl;
 
-  Future<Map<String, dynamic>> get(String endpoint) async {
+  const ApiService({this.baseUrl = 'https://bridge.alisuhari.top'});
+
+  Future<Map<String, dynamic>> get(
+    String endpoint, {
+    Map<String, String> headers = const {},
+  }) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
-        headers: const {
+        headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          ...headers,
         },
       ).timeout(const Duration(seconds: 30));
 

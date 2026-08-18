@@ -1,229 +1,294 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
-import '../widgets/neo_card.dart';
-import '../models/forex_position.dart';
 import 'package:intl/intl.dart';
 
-class ForexScreen extends StatelessWidget {
+import '../models/forex_position.dart';
+import '../models/mt5_history.dart';
+import '../services/mt5_history_service.dart';
+import '../theme/colors.dart';
+import '../widgets/neo_button.dart';
+import '../widgets/neo_card.dart';
+
+class ForexScreen extends StatefulWidget {
   final MT5PositionsResponse positions;
 
   const ForexScreen({super.key, required this.positions});
 
   @override
+  State<ForexScreen> createState() => _ForexScreenState();
+}
+
+class _ForexScreenState extends State<ForexScreen> {
+  final MT5HistoryService _historyService = MT5HistoryService();
+  MT5HistoryResponse? _history;
+  String? _historyError;
+  bool _historyLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    if (mounted) {
+      setState(() {
+        _historyLoading = true;
+        _historyError = null;
+      });
+    }
+    try {
+      final result = await _historyService.fetchHistory(limit: 50);
+      if (!mounted) return;
+      setState(() {
+        _history = result;
+        _historyLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _historyError = error.toString().replaceFirst('Exception: ', '');
+        _historyLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final positions = widget.positions;
     return Scaffold(
       backgroundColor: NeoColors.cream,
       appBar: AppBar(
         backgroundColor: NeoColors.orange,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: NeoColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'MT5 Positions',
-          style: TextStyle(
-            color: NeoColors.black,
-            fontWeight: FontWeight.w800,
-          ),
+          'MT5 Trading',
+          style: TextStyle(color: NeoColors.black, fontWeight: FontWeight.w900),
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Total P&L Summary
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(24),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: positions.totalPnl >= 0
-                    ? NeoColors.mintGreen
-                    : const Color(0xFFFFE5E5),
-                border: Border.all(color: NeoColors.black, width: 3),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(
-                    color: NeoColors.black,
-                    offset: Offset(6, 6),
-                    blurRadius: 0,
+        child: RefreshIndicator(
+          onRefresh: _loadHistory,
+          color: NeoColors.orange,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              _OpenSummary(positions: positions),
+              const SizedBox(height: 22),
+              const _SectionTitle('Open Positions'),
+              const SizedBox(height: 10),
+              if (positions.positions.isEmpty)
+                const NeoCard(child: Text('No open MT5 positions'))
+              else
+                ...positions.positions.map(_positionCard),
+              const SizedBox(height: 22),
+              const _SectionTitle('History & Summary P&L'),
+              const SizedBox(height: 10),
+              if (_historyLoading)
+                const Center(child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ))
+              else if (_historyError != null)
+                NeoCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _historyError!,
+                        style: const TextStyle(color: NeoColors.red, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 12),
+                      NeoButton(text: 'Retry history', icon: Icons.refresh, onPressed: _loadHistory),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Total P&L',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '\$${positions.totalPnl.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: positions.totalPnl >= 0
-                          ? NeoColors.green
-                          : NeoColors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                )
+              else if (_history != null) ...[
+                _HistorySummary(history: _history!),
+                const SizedBox(height: 16),
+                if (_history!.deals.isEmpty)
+                  const NeoCard(child: Text('No MT5 history available'))
+                else
+                  ..._history!.deals.map(_dealCard),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Positions List
-            Expanded(
-              child: positions.positions.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No open MT5 positions',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: positions.positions.length,
-                itemBuilder: (context, index) {
-                  final position = positions.positions[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: NeoCard(
-                      backgroundColor: position.isProfitable
-                          ? NeoColors.mintGreen
-                          : const Color(0xFFFFE5E5),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    position.symbol,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: position.isLong
-                                          ? NeoColors.blue
-                                          : NeoColors.orange,
-                                      border: Border.all(
-                                          color: NeoColors.black, width: 2),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      position.type,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: NeoColors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: position.isProfitable
-                                      ? NeoColors.green
-                                      : NeoColors.red,
-                                  border: Border.all(
-                                      color: NeoColors.black, width: 2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${position.pnlPct >= 0 ? '+' : ''}${position.pnlPct.toStringAsFixed(2)}%',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: NeoColors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildInfoRow('Lots', position.volume.toStringAsFixed(2)),
-                          _buildInfoRow('Open', '\$${position.priceOpen.toStringAsFixed(5)}'),
-                          _buildInfoRow('Current', '\$${position.priceCurrent.toStringAsFixed(5)}'),
-                          _buildInfoRow(
-                            'P&L',
-                            '\$${position.pnlUsd.toStringAsFixed(2)}',
-                            color: position.isProfitable
-                                ? NeoColors.green
-                                : NeoColors.red,
-                          ),
-                          if (position.tp > 0)
-                            _buildInfoRow('TP', '\$${position.tp.toStringAsFixed(5)}'),
-                          if (position.sl > 0)
-                            _buildInfoRow('SL', '\$${position.sl.toStringAsFixed(5)}'),
-                          if (position.time.isNotEmpty)
-                            _buildInfoRow('Opened', _formatTime(position.time)),
-                        ],
-                      ),
+  Widget _positionCard(MT5Position position) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: NeoCard(
+          backgroundColor: position.isProfitable ? NeoColors.mintGreen : const Color(0xFFFFE5E5),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${position.symbol}  ${position.type}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     ),
-                  );
-                },
+                  ),
+                  Text(
+                    '${position.pnlUsd >= 0 ? '+' : ''}\$${position.pnlUsd.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: position.isProfitable ? NeoColors.green : NeoColors.red,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _infoRow('Volume', position.volume.toStringAsFixed(2)),
+              _infoRow('Open', position.priceOpen.toStringAsFixed(5)),
+              _infoRow('Current', position.priceCurrent.toStringAsFixed(5)),
+              if (position.sl > 0) _infoRow('SL', position.sl.toStringAsFixed(5)),
+              if (position.tp > 0) _infoRow('TP', position.tp.toStringAsFixed(5)),
+            ],
+          ),
+        ),
+      );
+
+  Widget _dealCard(MT5Deal deal) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: NeoCard(
+          backgroundColor: deal.netPnl >= 0 ? NeoColors.white : const Color(0xFFFFE5E5),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${deal.symbol}  ${deal.type}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${deal.netPnl >= 0 ? '+' : ''}\$${deal.netPnl.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: deal.netPnl >= 0 ? NeoColors.green : NeoColors.red,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              _infoRow('Time', _formatTime(deal.time)),
+              _infoRow('Volume', deal.volume.toStringAsFixed(2)),
+              _infoRow('Price', deal.price.toStringAsFixed(5)),
+              if (deal.comment.isNotEmpty) _infoRow('Comment', deal.comment),
+            ],
+          ),
+        ),
+      );
+
+  Widget _infoRow(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: color ?? NeoColors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      );
 
   String _formatTime(String timestamp) {
     try {
-      final dt = DateTime.parse(timestamp);
-      return DateFormat('MMM dd, HH:mm').format(dt);
-    } catch (e) {
+      return DateFormat('MMM dd, HH:mm').format(DateTime.parse(timestamp));
+    } catch (_) {
       return timestamp;
     }
   }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+      );
+}
+
+class _OpenSummary extends StatelessWidget {
+  final MT5PositionsResponse positions;
+  const _OpenSummary({required this.positions});
+
+  @override
+  Widget build(BuildContext context) => NeoCard(
+        backgroundColor: NeoColors.orange,
+        child: Column(
+          children: [
+            const Text('Account & Open P&L', style: TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 7),
+            Text(
+              '${positions.totalPnl >= 0 ? '+' : ''}\$${positions.totalPnl.toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '${positions.account.currency} ${positions.account.balance.toStringAsFixed(2)} balance  •  '
+              '${positions.count} open  •  ${positions.account.server}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      );
+}
+
+class _HistorySummary extends StatelessWidget {
+  final MT5HistoryResponse history;
+  const _HistorySummary({required this.history});
+
+  @override
+  Widget build(BuildContext context) => NeoCard(
+        backgroundColor: NeoColors.yellow,
+        child: Column(
+          children: [
+            _summaryRow('Daily P&L (${history.summary.todayMyt})', history.summary.dailyPnl),
+            _summaryRow('All-time P&L', history.summary.allTimePnl),
+            _summaryRow('Filtered list P&L', history.summary.filteredListPnl),
+            const Divider(color: NeoColors.black),
+            Row(
+              children: [
+                Expanded(child: Text('${history.total} total deals', style: const TextStyle(fontWeight: FontWeight.w800))),
+                Text('${history.count} loaded', style: const TextStyle(fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ],
+        ),
+      );
+
+  Widget _summaryRow(String label, double value) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))),
+            Text(
+              '${value >= 0 ? '+' : ''}\$${value.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: value >= 0 ? NeoColors.green : NeoColors.red,
+              ),
+            ),
+          ],
+        ),
+      );
 }
