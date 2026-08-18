@@ -24,7 +24,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.jarvis.app"
-    compileSdkVersion 33
+    compileSdk flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -35,10 +36,14 @@ android {
         jvmTarget = '1.8'
     }
 
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
     defaultConfig {
         applicationId "com.jarvis.app"
-        minSdkVersion 21
-        targetSdkVersion 33
+        minSdk flutter.minSdkVersion
+        targetSdk flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
