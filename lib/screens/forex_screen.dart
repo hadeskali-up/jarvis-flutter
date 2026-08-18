@@ -76,7 +76,17 @@ class ForexScreen extends StatelessWidget {
 
             // Positions List
             Expanded(
-              child: ListView.builder(
+              child: positions.positions.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No open MT5 positions',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 itemCount: positions.positions.length,
                 itemBuilder: (context, index) {
