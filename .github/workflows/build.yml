@@ -1,5 +1,8 @@
 name: Build and Release APK
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main ]
@@ -31,6 +34,12 @@ jobs:
 
     - name: Get dependencies
       run: flutter pub get
+
+    - name: Analyze code
+      run: flutter analyze --no-fatal-infos
+
+    - name: Test API contracts
+      run: flutter test
 
     - name: Build APK
       run: flutter build apk --release
@@ -77,3 +86,4 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true

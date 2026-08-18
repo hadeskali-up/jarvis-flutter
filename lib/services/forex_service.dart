@@ -5,7 +5,7 @@ class ForexService {
   final ApiService _api = ApiService();
 
   Future<MT5PositionsResponse> fetchMT5Positions() async {
-    final data = await _api.get('/mt5/positions');
+    final data = await _api.get('/api/mt5-positions');
     return MT5PositionsResponse.fromJson(data);
   }
 }

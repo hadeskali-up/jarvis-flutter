@@ -97,7 +97,7 @@ class ForexScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    position.pair,
+                                    position.symbol,
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,
@@ -118,7 +118,7 @@ class ForexScreen extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      position.direction,
+                                      position.type,
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -153,9 +153,9 @@ class ForexScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          _buildInfoRow('Lots', position.lots.toStringAsFixed(2)),
-                          _buildInfoRow('Open', '\$${position.openPrice.toStringAsFixed(5)}'),
-                          _buildInfoRow('Current', '\$${position.currentPrice.toStringAsFixed(5)}'),
+                          _buildInfoRow('Lots', position.volume.toStringAsFixed(2)),
+                          _buildInfoRow('Open', '\$${position.priceOpen.toStringAsFixed(5)}'),
+                          _buildInfoRow('Current', '\$${position.priceCurrent.toStringAsFixed(5)}'),
                           _buildInfoRow(
                             'P&L',
                             '\$${position.pnlUsd.toStringAsFixed(2)}',
@@ -167,8 +167,8 @@ class ForexScreen extends StatelessWidget {
                             _buildInfoRow('TP', '\$${position.tp.toStringAsFixed(5)}'),
                           if (position.sl > 0)
                             _buildInfoRow('SL', '\$${position.sl.toStringAsFixed(5)}'),
-                          if (position.openTime.isNotEmpty)
-                            _buildInfoRow('Opened', _formatTime(position.openTime)),
+                          if (position.time.isNotEmpty)
+                            _buildInfoRow('Opened', _formatTime(position.time)),
                         ],
                       ),
                     ),

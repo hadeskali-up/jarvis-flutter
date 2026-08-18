@@ -9,11 +9,15 @@ class CryptoPositionsResponse {
 
   factory CryptoPositionsResponse.fromJson(Map<String, dynamic> json) {
     return CryptoPositionsResponse(
-      positions: (json['positions'] as List?)
-              ?.map((e) => CryptoPosition.fromJson(e))
-              .toList() ??
-          [],
-      count: json['count'] ?? 0,
+      positions: json['positions'] is List
+          ? (json['positions'] as List)
+              .whereType<Map>()
+              .map((item) => CryptoPosition.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList()
+          : const [],
+      count: (json['count'] as num?)?.toInt() ?? 0,
     );
   }
 }

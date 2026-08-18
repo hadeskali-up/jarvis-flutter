@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/neo_card.dart';
-import '../widgets/neo_button.dart';
 import '../services/ai_service.dart';
 import '../services/crypto_service.dart';
 import '../services/forex_service.dart';
@@ -42,9 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    _loadAiUsage();
-    _loadCryptoPositions();
-    _loadMt5Positions();
+    await Future.wait([
+      _loadAiUsage(),
+      _loadCryptoPositions(),
+      _loadMt5Positions(),
+    ]);
   }
 
   Future<void> _loadAiUsage() async {
@@ -199,13 +200,43 @@ class _HomeScreenState extends State<HomeScreen> {
           else if (_aiError != null)
             Text('Error: $_aiError',
                 style: const TextStyle(color: NeoColors.red))
+          else if (_aiUsage != null && !_aiUsage!.ok)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _aiUsage!.error.isEmpty
+                      ? 'AI usage unavailable'
+                      : _aiUsage!.error,
+                  style: const TextStyle(
+                    color: NeoColors.red,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (_aiUsage!.lastGoodAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text('Last good: ${_aiUsage!.lastGoodAt}'),
+                ],
+              ],
+            )
           else if (_aiUsage != null)
-            Text(
-              '\$${_aiUsage!.credit.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '\$${_aiUsage!.balance.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  'Spent \$${_aiUsage!.spent.toStringAsFixed(2)} of '
+                  '\$${_aiUsage!.budget.toStringAsFixed(2)} '
+                  '(${_aiUsage!.usedPct.toStringAsFixed(0)}%)',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
         ],
       ),
@@ -322,10 +353,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text('Error: $_mt5Error',
                 style: const TextStyle(color: NeoColors.red)),
           )
-        else if (_mt5Positions != null && _mt5Positions!.positions.isEmpty)
-          NeoCard(
-            child: const Text('No positions'),
-          )
         else if (_mt5Positions != null)
           NeoCard(
             backgroundColor: NeoColors.orange,
@@ -341,7 +368,9 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_mt5Positions!.count} positions',
+                  _mt5Positions!.positions.isEmpty
+                      ? 'No open positions'
+                      : '${_mt5Positions!.count} positions',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -356,6 +385,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: _mt5Positions!.totalPnl >= 0
                         ? NeoColors.green
                         : NeoColors.red,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Balance: ${_mt5Positions!.account.currency} '
+                  '${_mt5Positions!.account.balance.toStringAsFixed(2)}  •  '
+                  '${_mt5Positions!.account.server.isEmpty ? 'MT5' : _mt5Positions!.account.server}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
