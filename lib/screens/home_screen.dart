@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/neo_card.dart';
+import '../widgets/neo_button.dart';
 import '../services/ai_service.dart';
 import '../services/crypto_service.dart';
 import '../services/forex_service.dart';
@@ -108,6 +109,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _errorState(String message, Future<void> Function() retry) {
+    final cleaned = message.replaceFirst('Exception: ', '');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          cleaned,
+          style: const TextStyle(
+            color: NeoColors.red,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        NeoButton(
+          text: 'Retry',
+          icon: Icons.refresh,
+          onPressed: () => retry(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -198,8 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_isLoadingAi)
             const Center(child: CircularProgressIndicator())
           else if (_aiError != null)
-            Text('Error: $_aiError',
-                style: const TextStyle(color: NeoColors.red))
+            _errorState(_aiError!, _loadAiUsage)
           else if (_aiUsage != null && !_aiUsage!.ok)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,8 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Center(child: CircularProgressIndicator())
         else if (_cryptoError != null)
           NeoCard(
-            child: Text('Error: $_cryptoError',
-                style: const TextStyle(color: NeoColors.red)),
+            child: _errorState(_cryptoError!, _loadCryptoPositions),
           )
         else if (_cryptoPositions != null && _cryptoPositions!.positions.isEmpty)
           NeoCard(
@@ -350,8 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Center(child: CircularProgressIndicator())
         else if (_mt5Error != null)
           NeoCard(
-            child: Text('Error: $_mt5Error',
-                style: const TextStyle(color: NeoColors.red)),
+            child: _errorState(_mt5Error!, _loadMt5Positions),
           )
         else if (_mt5Positions != null)
           NeoCard(
