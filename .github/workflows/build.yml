@@ -1,0 +1,82 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'gradle'
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+        cache: true
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Analyze code
+      run: flutter analyze --no-fatal-infos
+
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Get commit info
+      id: commit
+      run: |
+        echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+    - name: Rename APK
+      run: |
+        cp build/app/outputs/flutter-apk/app-release.apk jarvis-flutter-${{ steps.commit.outputs.sha_short }}.apk
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: jarvis-flutter-apk
+        path: jarvis-flutter-*.apk
+        retention-days: 30
+
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.${{ github.run_number }}
+        name: Release v1.0.${{ github.run_number }}
+        body: |
+          **Jarvis Flutter** - Neobrutalist Design
+          
+          Commit: ${{ steps.commit.outputs.sha_short }}
+          Branch: ${{ steps.commit.outputs.branch }}
+          
+          ## Features
+          - Neobrutalist pet-care inspired design
+          - Splash screen with animation
+          - Home dashboard with AI Router credit
+          - Crypto positions viewer
+          - MT5 Forex positions viewer
+          - Pull-to-refresh
+          - Working navigation and buttons
+        files: jarvis-flutter-*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

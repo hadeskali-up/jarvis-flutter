@@ -1,0 +1,27 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'theme/app_theme.dart';
+import 'screens/splash_screen.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  runApp(const JarvisApp());
+}
+
+class JarvisApp extends StatelessWidget {
+  const JarvisApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Jarvis',
+      theme: AppTheme.theme,
+      home: const SplashScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
